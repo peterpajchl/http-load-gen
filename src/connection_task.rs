@@ -2,6 +2,7 @@ use anyhow::{Context, Ok, Result};
 use async_trait::async_trait;
 use hyper::{client::HttpConnector, http::Uri, Body, Client, StatusCode};
 use std::time::{Duration, Instant};
+use crate::input_params::InputParams;
 
 type HTTPClient = Client<HttpConnector, Body>;
 
@@ -15,22 +16,6 @@ impl HTTPClientConformer for HTTPClient {
     async fn fetch(&self, uri: Uri) -> Result<StatusCode, anyhow::Error> {
         let response = self.get(uri).await?;
         Ok(response.status())
-    }
-}
-
-pub struct RunSettings {
-    num_of_connections: u64,
-    num_of_total_requests: u64,
-    endpoing_uri: Uri,
-}
-
-impl RunSettings {
-    pub fn new(num_of_connections: u64, num_of_total_requests: u64, endpoing_uri: Uri) -> Self {
-        RunSettings {
-            num_of_connections,
-            num_of_total_requests,
-            endpoing_uri,
-        }
     }
 }
 
@@ -118,18 +103,17 @@ pub async fn task(
     Ok(connection_stats)
 }
 
-pub async fn run(settings: RunSettings) -> Result<TaskResults> {
+pub async fn run(settings: InputParams) -> Result<TaskResults> {
     let mut join_handles = Vec::new();
     let mut task_results = Vec::new();
-
     let now = Instant::now();
 
-    for i in 0..settings.num_of_connections {
+    for i in 0..settings.connections {
         let client = Client::builder().build_http::<Body>();
         let task_props = TaskProps::new(
-            i,
-            settings.num_of_total_requests / settings.num_of_connections,
-            settings.endpoing_uri.clone(),
+            i as u64,
+            settings.requests / settings.connections as u64,
+            settings.target_url.clone(),
         );
 
         join_handles.push(tokio::spawn(task(client, task_props)));
@@ -153,7 +137,7 @@ pub async fn run(settings: RunSettings) -> Result<TaskResults> {
 }
 
 #[cfg(test)]
-mod test {
+mod test_connection {
     use async_trait::async_trait;
     use hyper::{StatusCode, Uri};
     use crate::connection_task::TaskProps;

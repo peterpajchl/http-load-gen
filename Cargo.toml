@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.69"
 async-trait = "0.1.64"
+clap = { version = "4.2.1", features = ["derive"]}
 hyper = {version = "0.14.24", features = ["full"]}
 tokio = {version = "1.25.0", features = ["full"]}
