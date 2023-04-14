@@ -1,5 +1,7 @@
 use clap::Parser;
 use hyper::Uri;
+use std::path::Path;
+use std::ffi::OsStr;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -13,8 +15,23 @@ pub struct InputParams {
 
   pub target_url: Uri,
 
-  #[arg(short, long)]
+  #[arg(short, long, value_parser = file_exists)]
   pub output_file: Option<String>
+}
+
+fn file_exists(output_file: &str) -> Result<String, std::io::Error> {
+
+  let file_path = Path::new(output_file);
+
+  if file_path.extension().and_then(OsStr::to_str) != Some("csv") {
+    return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "The provided file must have .csv extension!"))
+  }
+
+  if file_path.try_exists()? {
+    Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, "The provided report file already exists!"))
+  } else {
+    Ok(String::from(output_file))
+  }
 }
 
 fn connections_in_range(s: &str) -> Result<u16, String> {
